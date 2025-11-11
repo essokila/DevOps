@@ -1,0 +1,34 @@
+name: Analyse de sécurité Python (Bandit)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  security_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cloner le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installer Bandit et jq
+        run: |
+          pip install bandit jq
+
+      - name: Lancer l'analyse de sécurité
+        run: |
+          bandit -r . -f json -o bandit-report.json || true
+          high_count=$(jq '.results[] | select(.issue_severity=="HIGH") | length' bandit-report.json | wc -l)
+          echo "Nombre de vulnérabilités HIGH détectées : $high_count"
+          if [ "$high_count" -gt 0 ]; then
+            echo "❌ Vulnérabilités HIGH détectées !"
+            exit 1
+          else
+            echo "✅ Aucun problème critique trouvé."
+          fi
